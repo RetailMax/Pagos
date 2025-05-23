@@ -1,4 +1,4 @@
-package com.pagos.Pagos;
+package com.pagos.pagos;
 
 import org.springframework.boot.SpringApplication;
 import org.springframework.boot.autoconfigure.SpringBootApplication;
