@@ -38,6 +38,6 @@ public class PagoModel {
     
     @OneToOne(cascade = CascadeType.ALL)
     @JoinColumn(name = "transaction_id", referencedColumnName = "id")
-    private TransaccionModel transaction;
+    private TransaccionModel transaccion;
 
 }
