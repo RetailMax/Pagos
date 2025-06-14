@@ -1,6 +1,7 @@
 package com.pagos.pagos.services;
 import java.math.BigDecimal;
 import java.time.LocalDateTime;
+import java.util.List;
 import java.util.UUID;
 
 import org.springframework.beans.factory.annotation.Autowired;
@@ -39,7 +40,18 @@ private final PagoRepository pagoRepository;
         
         return pagoRepository.save(pago);
     }
+
+    public List<PagoModel> findAll() {
+        return pagoRepository.findAll();
+    }
     
+    public PagoModel save(PagoModel pago) {
+        return pagoRepository.save(pago);
+    }
+
+    public void deleteById(UUID id) {
+        pagoRepository.deleteById(id);
+    }
     public PagoModel obtenerPagoPorId(UUID id) {
         return pagoRepository.findById(id).orElse(null);
     }
