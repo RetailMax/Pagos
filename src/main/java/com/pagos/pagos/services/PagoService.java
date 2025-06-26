@@ -2,6 +2,7 @@ package com.pagos.pagos.services;
 import java.math.BigDecimal;
 import java.time.LocalDateTime;
 import java.util.List;
+import java.util.Optional;
 import java.util.UUID;
 
 import org.springframework.beans.factory.annotation.Autowired;
@@ -24,27 +25,41 @@ private final PagoRepository pagoRepository;
         this.transaccionRepository = transaccionRepository;
     }
     
+
     public PagoModel procesarPago(UUID orderId, UUID usuarioId, BigDecimal monto) {
-        TransaccionModel transaccion = new TransaccionModel();
-        transaccion.setEstado("PENDIENTE");
-        transaccion.setProveedor("WEBPAY");
-        transaccion = transaccionRepository.save(transaccion);
-        
+        // Esto crea y guarda un pago sin haber realizado la transacción
         PagoModel pago = new PagoModel();
         pago.setOrderId(orderId);
         pago.setUsuarioId(usuarioId);
         pago.setMonto(monto);
         pago.setEstado("PROCESANDO");
         pago.setFechaPago(LocalDateTime.now());
-        pago.setTransaccion (transaccion);
-        
-        return pagoRepository.save(pago);
+
+        PagoModel pagoGuardado = pagoRepository.save(pago);
+
+        // Crear la transacción referenciando al pago por medio 
+        TransaccionModel transaccion = new TransaccionModel();
+        transaccion.setPagoId(pagoGuardado.getId());
+        transaccion.setEstado("PENDIENTE");
+        transaccion.setProveedor("WEBPAY");
+        transaccion.setFechaTransaccion(LocalDateTime.now());
+        transaccion.setMonto(monto);
+
+        TransaccionModel transaccionGuardada = transaccionRepository.save(transaccion);
+
+        //Actualizar el pago con el ID de la transacción
+        pagoGuardado.setTransaccionId(transaccionGuardada.getId());
+        return pagoRepository.save(pagoGuardado);
     }
 
     public List<PagoModel> findAll() {
         return pagoRepository.findAll();
     }
     
+    public Optional<PagoModel> findById(UUID id) {
+        return pagoRepository.findById(id);
+    }
+
     public PagoModel save(PagoModel pago) {
         return pagoRepository.save(pago);
     }
