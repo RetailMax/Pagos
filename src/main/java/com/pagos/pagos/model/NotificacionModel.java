@@ -15,14 +15,21 @@ import lombok.Data;
 @Entity
 @Table(name = "notificaciones")
 public class NotificacionModel {
-    @Id
+
+ @Id
     @GeneratedValue(strategy = GenerationType.UUID)
     private UUID id;
-    
-    private String tipo;
+
+    @Column(nullable = false)
+    private String tipo; 
+
+    @Column(nullable = false, length = 1000)
     private String mensaje;
+
+    @Column(name = "fecha_envio")
     private LocalDateTime fechaEnvio;
+
+    @Column(name = "destinatario_id", nullable = false)
+    private UUID destinatarioId; 
     
-    @Column(name = "destinatario_id")
-    private UUID destinatarioId;
 }
