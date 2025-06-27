@@ -1,4 +1,4 @@
-package com.pagos.Pagos;
+package com.pagos.pagos;
 
 import org.junit.jupiter.api.Test;
 import org.springframework.boot.test.context.SpringBootTest;
