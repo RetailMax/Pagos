@@ -37,7 +37,7 @@ public class UsuarioControllerV2 {
         this.assembler = assembler;
     }
     //Lista usuarios
-    @GetMapping
+    @GetMapping(produces = MediaTypes.HAL_JSON_VALUE)
     public CollectionModel<EntityModel<UsuarioModel>> getAllUsuarios() {
         List<EntityModel<UsuarioModel>> usuarios = usuarioService.findAll().stream()
                 .map(assembler::toModel)
@@ -47,7 +47,7 @@ public class UsuarioControllerV2 {
                 linkTo(methodOn(UsuarioControllerV2.class).getAllUsuarios()).withSelfRel());
     }
     //Busca usuario por su uuid
-    @GetMapping("/{id}")
+    @GetMapping(value = "/{id}", produces = MediaTypes.HAL_JSON_VALUE)
     public ResponseEntity<EntityModel<UsuarioModel>> getUsuarioById(@PathVariable UUID id) {
         return usuarioService.findById(id)
                 .map(assembler::toModel)
@@ -55,7 +55,7 @@ public class UsuarioControllerV2 {
                 .orElse(ResponseEntity.notFound().build());
     }
     //Crea usuario
-    @PostMapping
+    @PostMapping(produces = MediaTypes.HAL_JSON_VALUE)
     public ResponseEntity<EntityModel<UsuarioModel>> createUsuario(@RequestBody UsuarioModel usuario) {
         UsuarioModel nuevo = usuarioService.save(usuario);
         return ResponseEntity
@@ -63,14 +63,14 @@ public class UsuarioControllerV2 {
                 .body(assembler.toModel(nuevo));
     }
     //Actualiza usuario
-    @PutMapping("/{id}")
+    @PutMapping(value = "/{id}", produces = MediaTypes.HAL_JSON_VALUE)
     public ResponseEntity<EntityModel<UsuarioModel>> updateUsuario(@PathVariable UUID id, @RequestBody UsuarioModel usuario) {
         usuario.setId(id);
         UsuarioModel actualizado = usuarioService.save(usuario);
         return ResponseEntity.ok(assembler.toModel(actualizado));
     }
     //elimina usuario
-    @DeleteMapping("/{id}")
+    @DeleteMapping(value = "/{id}", produces = MediaTypes.HAL_JSON_VALUE)
     public ResponseEntity<?> deleteUsuario(@PathVariable UUID id) {
         usuarioService.deleteById(id);
         return ResponseEntity.noContent().build();

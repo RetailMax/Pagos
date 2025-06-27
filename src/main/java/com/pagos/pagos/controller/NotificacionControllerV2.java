@@ -37,7 +37,7 @@ public class NotificacionControllerV2 {
         this.assembler = assembler;
     }
 
-    @GetMapping
+    @GetMapping(produces = MediaTypes.HAL_JSON_VALUE)
     public CollectionModel<EntityModel<NotificacionModel>> getAllNotificaciones() {
         List<EntityModel<NotificacionModel>> notificaciones = notificacionService.findAll().stream()
                 .map(assembler::toModel)
@@ -47,7 +47,7 @@ public class NotificacionControllerV2 {
                 linkTo(methodOn(NotificacionControllerV2.class).getAllNotificaciones()).withSelfRel());
     }
 
-    @GetMapping("/{id}")
+    @GetMapping(value = "/{id}", produces = MediaTypes.HAL_JSON_VALUE)
     public ResponseEntity<EntityModel<NotificacionModel>> getNotificacionById(@PathVariable UUID id) {
         return notificacionService.findById(id)
                 .map(assembler::toModel)
@@ -55,7 +55,7 @@ public class NotificacionControllerV2 {
                 .orElse(ResponseEntity.notFound().build());
     }
 
-    @PostMapping
+    @PostMapping(produces = MediaTypes.HAL_JSON_VALUE)
     public ResponseEntity<EntityModel<NotificacionModel>> createNotificacion(@RequestBody NotificacionModel notificacion) {
         NotificacionModel nueva = notificacionService.save(notificacion);
         return ResponseEntity
@@ -63,14 +63,14 @@ public class NotificacionControllerV2 {
                 .body(assembler.toModel(nueva));
     }
 
-    @PutMapping("/{id}")
+    @PutMapping(value = "/{id}", produces = MediaTypes.HAL_JSON_VALUE)
     public ResponseEntity<EntityModel<NotificacionModel>> updateNotificacion(@PathVariable UUID id, @RequestBody NotificacionModel notificacion) {
         notificacion.setId(id);
         NotificacionModel actualizada = notificacionService.save(notificacion);
         return ResponseEntity.ok(assembler.toModel(actualizada));
     }
 
-    @DeleteMapping("/{id}")
+    @DeleteMapping(value = "/{id}", produces = MediaTypes.HAL_JSON_VALUE)
     public ResponseEntity<?> deleteNotificacion(@PathVariable UUID id) {
         notificacionService.deleteById(id);
         return ResponseEntity.noContent().build();
