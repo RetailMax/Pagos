@@ -5,6 +5,7 @@ import java.util.List;
 import java.util.UUID;
 
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.hateoas.MediaTypes;
 import org.springframework.web.bind.annotation.DeleteMapping;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
@@ -28,7 +29,7 @@ public class ReembolsoControllerV2 {
     }
 
     // Crear un reembolso
-    @PostMapping
+    @PostMapping(produces = MediaTypes.HAL_JSON_VALUE)
     public ReembolsoModel crearReembolso(
             @RequestParam UUID pagoId,
             @RequestParam BigDecimal monto
@@ -37,19 +38,19 @@ public class ReembolsoControllerV2 {
     }
 
     // Obtiene una lista de todos los reembolsos
-    @GetMapping
+    @GetMapping(produces = MediaTypes.HAL_JSON_VALUE)
     public List<ReembolsoModel> getAllReembolsos() {
         return reembolsoService.obtenerTodos();
     }
 
     // Obtiene un reembolso por su ID
-    @GetMapping("/{id}")
+    @GetMapping(value = "/{id}",produces = MediaTypes.HAL_JSON_VALUE)
     public ReembolsoModel getReembolsoById(@PathVariable UUID id) {
         return reembolsoService.obtenerPorId(id);
     }
 
     // Eliminar un reembolso por su ID
-    @DeleteMapping("/{id}")
+    @DeleteMapping(value = "/{id}",produces = MediaTypes.HAL_JSON_VALUE)
     public void eliminarPorId(@PathVariable UUID id) {
         reembolsoService.eliminarPorId(id);
     }

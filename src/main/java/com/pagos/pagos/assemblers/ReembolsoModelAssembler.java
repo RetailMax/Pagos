@@ -19,8 +19,8 @@ public class ReembolsoModelAssembler implements RepresentationModelAssembler<Ree
         }
 
         return EntityModel.of(reembolso,
-                linkTo(methodOn(ReembolsoControllerV2.class).obtenerPorId(reembolso.getId())).withSelfRel(),
-                linkTo(methodOn(ReembolsoControllerV2.class).listarTodos()).withRel("reembolsos")
+                linkTo(methodOn(ReembolsoControllerV2.class).getReembolsoById(reembolso.getId())).withSelfRel(),
+                linkTo(methodOn(ReembolsoControllerV2.class).getAllReembolsos()).withRel("reembolsos")
         );
     }
 }
