@@ -25,7 +25,7 @@ import com.pagos.pagos.model.NotificacionModel;
 import com.pagos.pagos.services.NotificacionService;
 
 @RestController
-@RequestMapping(value = "/api/v2/notificaciones", produces = MediaTypes.HAL_JSON_VALUE)
+@RequestMapping("/api/v2/notificaciones")
 public class NotificacionControllerV2 {
 
     private final NotificacionService notificacionService;
@@ -76,3 +76,4 @@ public class NotificacionControllerV2 {
         return ResponseEntity.noContent().build();
     }
 }
+
