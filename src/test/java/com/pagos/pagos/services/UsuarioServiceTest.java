@@ -1,8 +1,8 @@
-package com.pagos.pagos;
+package com.pagos.pagos.services;
 
 import com.pagos.pagos.model.UsuarioModel;
 import com.pagos.pagos.repository.UsuarioRepository;
-import com.pagos.pagos.services.UsuarioService;
+
 
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
