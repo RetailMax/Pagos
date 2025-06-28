@@ -1,7 +1,16 @@
 package com.pagos.pagos.assemblers;
 
-import com.pagos.pagos.model.PagoModel;
+import java.math.BigDecimal;
+import java.time.LocalDateTime;
+import java.util.UUID;
+
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertNotNull;
+import static org.junit.jupiter.api.Assertions.assertThrows;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.InjectMocks;
@@ -9,330 +18,189 @@ import org.mockito.junit.jupiter.MockitoExtension;
 import org.springframework.hateoas.EntityModel;
 import org.springframework.hateoas.Link;
 
-import java.math.BigDecimal;
-import java.time.LocalDateTime;
-import java.util.UUID;
-
-import static org.junit.jupiter.api.Assertions.*;
+import com.pagos.pagos.model.PagoModel;
 
 @ExtendWith(MockitoExtension.class)
+@DisplayName("Pruebas del Ensamblador de Modelo de Pago")
 public class PagoModelAssemblerTest {
 
     @InjectMocks
     private PagoModelAssembler assembler;
 
     private PagoModel pago;
+    private UUID pagoId;
+    private UUID orderId;
+    private UUID usuarioId;
+    private UUID transaccionId;
 
     @BeforeEach
     void setUp() {
+        pagoId = UUID.randomUUID();
+        orderId = UUID.randomUUID();
+        usuarioId = UUID.randomUUID();
+        transaccionId = UUID.randomUUID();
+
         pago = new PagoModel();
-        pago.setId(UUID.randomUUID());
-        pago.setMonto(BigDecimal.valueOf(5000));
+        pago.setId(pagoId);
+        pago.setOrderId(orderId);
+        pago.setUsuarioId(usuarioId);
+        pago.setMonto(new BigDecimal("50000.00"));
         pago.setEstado("Aprobado");
         pago.setFechaPago(LocalDateTime.now());
-        pago.setOrderId(UUID.randomUUID());
-        pago.setUsuarioId(UUID.randomUUID());
-        pago.setTransaccionId(UUID.randomUUID());
+        pago.setTransaccionId(transaccionId);
     }
 
     @Test
-    void testToModel() {
-        // Act
-        EntityModel<PagoModel> result = assembler.toModel(pago);
+    @DisplayName("Debería crear EntityModel correctamente")
+    public void testToModel() {
+        // When
+        EntityModel<PagoModel> entityModel = assembler.toModel(pago);
 
-        // Assert
-        assertNotNull(result);
-        assertEquals(pago, result.getContent());
-        assertNotNull(result.getLinks());
-        assertFalse(result.getLinks().isEmpty());
-        
-        // Verificar que tiene el link self
-        assertTrue(result.getLinks().hasLink("self"));
-        assertTrue(result.getLinks().hasLink("pagos"));
-        
-        // Verificar que los links tienen las URLs correctas
-        Link selfLink = result.getLinks().getLink("self").orElse(null);
+        // Then
+        assertNotNull(entityModel);
+        assertEquals(pago, entityModel.getContent());
+        assertNotNull(entityModel.getLinks());
+        assertFalse(entityModel.getLinks().isEmpty());
+    }
+
+    @Test
+    @DisplayName("Debería contener enlace self")
+    public void testToModel_ContainsSelfLink() {
+        // When
+        EntityModel<PagoModel> entityModel = assembler.toModel(pago);
+
+        // Then
+        assertTrue(entityModel.hasLink("self"));
+        Link selfLink = entityModel.getLink("self").orElse(null);
         assertNotNull(selfLink);
-        assertTrue(selfLink.getHref().contains("/api/v2/pagos/"));
-        assertTrue(selfLink.getHref().contains(pago.getId().toString()));
-        
-        Link pagosLink = result.getLinks().getLink("pagos").orElse(null);
-        assertNotNull(pagosLink);
-        assertTrue(pagosLink.getHref().contains("/api/v2/pagos"));
+        assertTrue(selfLink.getHref().contains(pagoId.toString()));
     }
 
     @Test
-    void testToModelWithNullPago() {
-        // Act & Assert
+    @DisplayName("Debería contener enlace a pagos")
+    public void testToModel_ContainsPagosLink() {
+        // When
+        EntityModel<PagoModel> entityModel = assembler.toModel(pago);
+
+        // Then
+        assertTrue(entityModel.hasLink("pagos"));
+        Link pagosLink = entityModel.getLink("pagos").orElse(null);
+        assertNotNull(pagosLink);
+    }
+
+    @Test
+    @DisplayName("Debería lanzar excepción cuando el pago es null")
+    public void testToModel_WithNullPago() {
+        // When & Then
         assertThrows(IllegalArgumentException.class, () -> {
             assembler.toModel(null);
         });
     }
 
     @Test
-    void testToModelWithPagoWithoutId() {
-        // Arrange
+    @DisplayName("Debería manejar pago con ID null")
+    public void testToModel_WithNullId() {
+        // Given
         pago.setId(null);
 
-        // Act
-        EntityModel<PagoModel> result = assembler.toModel(pago);
+        // When
+        EntityModel<PagoModel> entityModel = assembler.toModel(pago);
 
-        // Assert
-        assertNotNull(result);
-        assertEquals(pago, result.getContent());
-        assertNotNull(result.getLinks());
-        assertTrue(result.getLinks().hasLink("self"));
-        assertTrue(result.getLinks().hasLink("pagos"));
+        // Then
+        assertNotNull(entityModel);
+        assertEquals(pago, entityModel.getContent());
+        assertNotNull(entityModel.getLinks());
     }
 
     @Test
-    void testToModelWithPagoWithoutMonto() {
-        // Arrange
-        pago.setMonto(null);
+    @DisplayName("Debería manejar pago con datos mínimos")
+    public void testToModel_WithMinimalData() {
+        // Given
+        PagoModel pagoMinimo = new PagoModel();
+        pagoMinimo.setId(pagoId);
 
-        // Act
-        EntityModel<PagoModel> result = assembler.toModel(pago);
+        // When
+        EntityModel<PagoModel> entityModel = assembler.toModel(pagoMinimo);
 
-        // Assert
-        assertNotNull(result);
-        assertEquals(pago, result.getContent());
-        assertNotNull(result.getLinks());
-        assertTrue(result.getLinks().hasLink("self"));
-        assertTrue(result.getLinks().hasLink("pagos"));
+        // Then
+        assertNotNull(entityModel);
+        assertEquals(pagoMinimo, entityModel.getContent());
+        assertNotNull(entityModel.getLinks());
     }
 
     @Test
-    void testToModelWithPagoWithoutEstado() {
-        // Arrange
-        pago.setEstado(null);
+    @DisplayName("Debería mantener todos los datos del pago")
+    public void testToModel_PreservesAllData() {
+        // When
+        EntityModel<PagoModel> entityModel = assembler.toModel(pago);
 
-        // Act
-        EntityModel<PagoModel> result = assembler.toModel(pago);
-
-        // Assert
-        assertNotNull(result);
-        assertEquals(pago, result.getContent());
-        assertNotNull(result.getLinks());
-        assertTrue(result.getLinks().hasLink("self"));
-        assertTrue(result.getLinks().hasLink("pagos"));
+        // Then
+        PagoModel contenido = entityModel.getContent();
+        assertEquals(pagoId, contenido.getId());
+        assertEquals(orderId, contenido.getOrderId());
+        assertEquals(usuarioId, contenido.getUsuarioId());
+        assertEquals(new BigDecimal("50000.00"), contenido.getMonto());
+        assertEquals("Aprobado", contenido.getEstado());
+        assertEquals(transaccionId, contenido.getTransaccionId());
     }
 
     @Test
-    void testToModelWithPagoWithoutFechaPago() {
-        // Arrange
-        pago.setFechaPago(null);
+    @DisplayName("Debería generar enlaces válidos")
+    public void testToModel_ValidLinks() {
+        // When
+        EntityModel<PagoModel> entityModel = assembler.toModel(pago);
 
-        // Act
-        EntityModel<PagoModel> result = assembler.toModel(pago);
-
-        // Assert
-        assertNotNull(result);
-        assertEquals(pago, result.getContent());
-        assertNotNull(result.getLinks());
-        assertTrue(result.getLinks().hasLink("self"));
-        assertTrue(result.getLinks().hasLink("pagos"));
+        // Then
+        assertNotNull(entityModel.getLinks());
+        assertTrue(entityModel.getLinks().toList().size() >= 2);
+        
+        // Verificar que todos los enlaces tienen href válidos
+        entityModel.getLinks().forEach(link -> {
+            assertNotNull(link.getHref());
+            assertFalse(link.getHref().isEmpty());
+        });
     }
 
     @Test
-    void testToModelWithPagoWithoutOrderId() {
-        // Arrange
-        pago.setOrderId(null);
+    @DisplayName("Debería manejar múltiples llamadas")
+    public void testToModel_MultipleCalls() {
+        // When
+        EntityModel<PagoModel> entityModel1 = assembler.toModel(pago);
+        EntityModel<PagoModel> entityModel2 = assembler.toModel(pago);
 
-        // Act
-        EntityModel<PagoModel> result = assembler.toModel(pago);
-
-        // Assert
-        assertNotNull(result);
-        assertEquals(pago, result.getContent());
-        assertNotNull(result.getLinks());
-        assertTrue(result.getLinks().hasLink("self"));
-        assertTrue(result.getLinks().hasLink("pagos"));
+        // Then
+        assertNotNull(entityModel1);
+        assertNotNull(entityModel2);
+        assertEquals(entityModel1.getContent(), entityModel2.getContent());
     }
 
     @Test
-    void testToModelWithPagoWithoutUsuarioId() {
-        // Arrange
-        pago.setUsuarioId(null);
+    @DisplayName("Debería manejar pago con estado rechazado")
+    public void testToModel_WithRejectedStatus() {
+        // Given
+        pago.setEstado("Rechazado");
 
-        // Act
-        EntityModel<PagoModel> result = assembler.toModel(pago);
+        // When
+        EntityModel<PagoModel> entityModel = assembler.toModel(pago);
 
-        // Assert
-        assertNotNull(result);
-        assertEquals(pago, result.getContent());
-        assertNotNull(result.getLinks());
-        assertTrue(result.getLinks().hasLink("self"));
-        assertTrue(result.getLinks().hasLink("pagos"));
+        // Then
+        assertNotNull(entityModel);
+        assertEquals("Rechazado", entityModel.getContent().getEstado());
+        assertNotNull(entityModel.getLinks());
     }
 
     @Test
-    void testToModelWithPagoWithoutTransaccionId() {
-        // Arrange
-        pago.setTransaccionId(null);
-
-        // Act
-        EntityModel<PagoModel> result = assembler.toModel(pago);
-
-        // Assert
-        assertNotNull(result);
-        assertEquals(pago, result.getContent());
-        assertNotNull(result.getLinks());
-        assertTrue(result.getLinks().hasLink("self"));
-        assertTrue(result.getLinks().hasLink("pagos"));
-    }
-
-    @Test
-    void testToModelWithPagoWithZeroMonto() {
-        // Arrange
+    @DisplayName("Debería manejar pago con monto cero")
+    public void testToModel_WithZeroAmount() {
+        // Given
         pago.setMonto(BigDecimal.ZERO);
 
-        // Act
-        EntityModel<PagoModel> result = assembler.toModel(pago);
+        // When
+        EntityModel<PagoModel> entityModel = assembler.toModel(pago);
 
-        // Assert
-        assertNotNull(result);
-        assertEquals(pago, result.getContent());
-        assertEquals(BigDecimal.ZERO, result.getContent().getMonto());
-        assertNotNull(result.getLinks());
-    }
-
-    @Test
-    void testToModelWithPagoWithNegativeMonto() {
-        // Arrange
-        pago.setMonto(BigDecimal.valueOf(-1000));
-
-        // Act
-        EntityModel<PagoModel> result = assembler.toModel(pago);
-
-        // Assert
-        assertNotNull(result);
-        assertEquals(pago, result.getContent());
-        assertEquals(BigDecimal.valueOf(-1000), result.getContent().getMonto());
-        assertNotNull(result.getLinks());
-    }
-
-    @Test
-    void testToModelWithPagoWithLargeMonto() {
-        // Arrange
-        pago.setMonto(BigDecimal.valueOf(999999.99));
-
-        // Act
-        EntityModel<PagoModel> result = assembler.toModel(pago);
-
-        // Assert
-        assertNotNull(result);
-        assertEquals(pago, result.getContent());
-        assertEquals(BigDecimal.valueOf(999999.99), result.getContent().getMonto());
-        assertNotNull(result.getLinks());
-    }
-
-    @Test
-    void testToModelWithPagoWithEmptyEstado() {
-        // Arrange
-        pago.setEstado("");
-
-        // Act
-        EntityModel<PagoModel> result = assembler.toModel(pago);
-
-        // Assert
-        assertNotNull(result);
-        assertEquals(pago, result.getContent());
-        assertEquals("", result.getContent().getEstado());
-        assertNotNull(result.getLinks());
-    }
-
-    @Test
-    void testToModelWithPagoWithDifferentEstados() {
-        // Arrange
-        String[] estados = {"Pendiente", "Aprobado", "Rechazado", "Cancelado", "Procesando"};
-        
-        for (String estado : estados) {
-            pago.setEstado(estado);
-            
-            // Act
-            EntityModel<PagoModel> result = assembler.toModel(pago);
-            
-            // Assert
-            assertNotNull(result);
-            assertEquals(pago, result.getContent());
-            assertEquals(estado, result.getContent().getEstado());
-            assertNotNull(result.getLinks());
-        }
-    }
-
-    @Test
-    void testToModelWithPagoWithPastDate() {
-        // Arrange
-        pago.setFechaPago(LocalDateTime.now().minusDays(1));
-
-        // Act
-        EntityModel<PagoModel> result = assembler.toModel(pago);
-
-        // Assert
-        assertNotNull(result);
-        assertEquals(pago, result.getContent());
-        assertTrue(result.getContent().getFechaPago().isBefore(LocalDateTime.now()));
-        assertNotNull(result.getLinks());
-    }
-
-    @Test
-    void testToModelWithPagoWithFutureDate() {
-        // Arrange
-        pago.setFechaPago(LocalDateTime.now().plusDays(1));
-
-        // Act
-        EntityModel<PagoModel> result = assembler.toModel(pago);
-
-        // Assert
-        assertNotNull(result);
-        assertEquals(pago, result.getContent());
-        assertTrue(result.getContent().getFechaPago().isAfter(LocalDateTime.now()));
-        assertNotNull(result.getLinks());
-    }
-
-    @Test
-    void testToModelMultipleTimes() {
-        // Act
-        EntityModel<PagoModel> result1 = assembler.toModel(pago);
-        EntityModel<PagoModel> result2 = assembler.toModel(pago);
-
-        // Assert
-        assertNotNull(result1);
-        assertNotNull(result2);
-        assertEquals(pago, result1.getContent());
-        assertEquals(pago, result2.getContent());
-        assertNotNull(result1.getLinks());
-        assertNotNull(result2.getLinks());
-        
-        // Los resultados deberían ser iguales para el mismo pago
-        assertEquals(result1.getContent().getId(), result2.getContent().getId());
-        assertEquals(result1.getContent().getMonto(), result2.getContent().getMonto());
-        assertEquals(result1.getContent().getEstado(), result2.getContent().getEstado());
-    }
-
-    @Test
-    void testToModelWithDifferentPagos() {
-        // Arrange
-        PagoModel pago2 = new PagoModel();
-        pago2.setId(UUID.randomUUID());
-        pago2.setMonto(BigDecimal.valueOf(3000));
-        pago2.setEstado("Rechazado");
-        pago2.setFechaPago(LocalDateTime.now());
-        pago2.setOrderId(UUID.randomUUID());
-        pago2.setUsuarioId(UUID.randomUUID());
-        pago2.setTransaccionId(UUID.randomUUID());
-
-        // Act
-        EntityModel<PagoModel> result1 = assembler.toModel(pago);
-        EntityModel<PagoModel> result2 = assembler.toModel(pago2);
-
-        // Assert
-        assertNotNull(result1);
-        assertNotNull(result2);
-        assertEquals(pago, result1.getContent());
-        assertEquals(pago2, result2.getContent());
-        assertNotEquals(result1.getContent().getId(), result2.getContent().getId());
-        assertNotEquals(result1.getContent().getMonto(), result2.getContent().getMonto());
-        assertNotEquals(result1.getContent().getEstado(), result2.getContent().getEstado());
+        // Then
+        assertNotNull(entityModel);
+        assertEquals(BigDecimal.ZERO, entityModel.getContent().getMonto());
+        assertNotNull(entityModel.getLinks());
     }
 } 

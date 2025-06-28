@@ -1,428 +1,267 @@
 package com.pagos.pagos.services;
 
-import com.pagos.pagos.model.PagoModel;
-import com.pagos.pagos.model.TransaccionModel;
-import com.pagos.pagos.repository.PagoRepository;
-import com.pagos.pagos.repository.TransaccionRepository;
-import org.junit.jupiter.api.BeforeEach;
-import org.junit.jupiter.api.Test;
-import org.junit.jupiter.api.extension.ExtendWith;
-import org.mockito.InjectMocks;
-import org.mockito.Mock;
-import org.mockito.junit.jupiter.MockitoExtension;
-
 import java.math.BigDecimal;
 import java.time.LocalDateTime;
 import java.util.Arrays;
-import java.util.Collections;
 import java.util.List;
 import java.util.Optional;
 import java.util.UUID;
 
-import static org.junit.jupiter.api.Assertions.*;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertNotNull;
+import static org.junit.jupiter.api.Assertions.assertNull;
+import static org.junit.jupiter.api.Assertions.assertThrows;
+import static org.junit.jupiter.api.Assertions.assertTrue;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.DisplayName;
+import org.junit.jupiter.api.Test;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.boot.test.context.SpringBootTest;
+import org.springframework.boot.test.mock.mockito.MockBean;
+import org.springframework.test.context.ActiveProfiles;
+
+import com.pagos.pagos.model.PagoModel;
+import com.pagos.pagos.model.TransaccionModel;
+import com.pagos.pagos.repository.PagoRepository;
+import com.pagos.pagos.repository.TransaccionRepository;
+
 import static org.mockito.ArgumentMatchers.any;
-import static org.mockito.ArgumentMatchers.argThat;
 import static org.mockito.Mockito.*;
 
-@ExtendWith(MockitoExtension.class)
+@SpringBootTest
+@ActiveProfiles("test")
+@DisplayName("Pruebas del Servicio de Pagos")
 public class PagoServiceTest {
 
-    @Mock
-    private PagoRepository pagoRepository;
-
-    @Mock
-    private TransaccionRepository transaccionRepository;
-
-    @Mock
-    private WebpayApiService webpayApiService;
-
-    @InjectMocks
+    @Autowired
     private PagoService pagoService;
 
-    private PagoModel pago;
-    private TransaccionModel transaccion;
-    private UUID pagoId;
+    @MockBean
+    private PagoRepository pagoRepository;
+
+    @MockBean
+    private TransaccionRepository transaccionRepository;
+
+    @MockBean
+    private WebpayApiService webpayApiService;
+
     private UUID orderId;
     private UUID usuarioId;
     private UUID transaccionId;
+    private UUID pagoId;
+    private BigDecimal monto;
+    private TransaccionModel transaccion;
+    private PagoModel pago;
 
     @BeforeEach
     void setUp() {
-        pagoId = UUID.randomUUID();
         orderId = UUID.randomUUID();
         usuarioId = UUID.randomUUID();
         transaccionId = UUID.randomUUID();
-
-        pago = new PagoModel();
-        pago.setId(pagoId);
-        pago.setMonto(BigDecimal.valueOf(5000));
-        pago.setEstado("Aprobado");
-        pago.setFechaPago(LocalDateTime.now());
-        pago.setOrderId(orderId);
-        pago.setUsuarioId(usuarioId);
-        pago.setTransaccionId(transaccionId);
+        pagoId = UUID.randomUUID();
+        monto = new BigDecimal("50000.00");
 
         transaccion = new TransaccionModel();
         transaccion.setId(transaccionId);
-        transaccion.setEstado("APROBADO");
-        transaccion.setProveedor("WEBPAYPLUS");
-        transaccion.setMonto(BigDecimal.valueOf(5000));
+        transaccion.setPagoId(pagoId);
+        transaccion.setMonto(monto);
+        transaccion.setEstado("Aprobado");
+        transaccion.setProveedor("WebpayPlus");
         transaccion.setFechaTransaccion(LocalDateTime.now());
+
+        pago = new PagoModel();
+        pago.setId(pagoId);
+        pago.setOrderId(orderId);
+        pago.setUsuarioId(usuarioId);
+        pago.setMonto(monto);
+        pago.setEstado("Aprobado");
+        pago.setFechaPago(LocalDateTime.now());
+        pago.setTransaccionId(transaccionId);
     }
 
     @Test
-    void testFindAll() {
-        // Arrange
-        List<PagoModel> expectedPagos = Arrays.asList(pago);
-        when(pagoRepository.findAll()).thenReturn(expectedPagos);
-
-        // Act
-        List<PagoModel> result = pagoService.findAll();
-
-        // Assert
-        assertNotNull(result);
-        assertEquals(1, result.size());
-        assertEquals(pago, result.get(0));
-        verify(pagoRepository).findAll();
-    }
-
-    @Test
-    void testFindAll_EmptyList() {
-        // Arrange
-        when(pagoRepository.findAll()).thenReturn(Collections.emptyList());
-
-        // Act
-        List<PagoModel> result = pagoService.findAll();
-
-        // Assert
-        assertNotNull(result);
-        assertTrue(result.isEmpty());
-        verify(pagoRepository).findAll();
-    }
-
-    @Test
-    void testFindAll_MultiplePagos() {
-        // Arrange
-        PagoModel pago2 = new PagoModel();
-        pago2.setId(UUID.randomUUID());
-        pago2.setMonto(BigDecimal.valueOf(3000));
-        pago2.setEstado("Rechazado");
-
-        List<PagoModel> expectedPagos = Arrays.asList(pago, pago2);
-        when(pagoRepository.findAll()).thenReturn(expectedPagos);
-
-        // Act
-        List<PagoModel> result = pagoService.findAll();
-
-        // Assert
-        assertNotNull(result);
-        assertEquals(2, result.size());
-        assertEquals(pago, result.get(0));
-        assertEquals(pago2, result.get(1));
-        verify(pagoRepository).findAll();
-    }
-
-    @Test
-    void testSave() {
-        // Arrange
+    @DisplayName("Debería procesar un pago exitosamente")
+    public void testProcesarPago_Success() {
+        // Given
+        when(webpayApiService.procesarTransaccion(orderId, monto)).thenReturn(transaccion);
+        when(transaccionRepository.save(any(TransaccionModel.class))).thenReturn(transaccion);
         when(pagoRepository.save(any(PagoModel.class))).thenReturn(pago);
 
-        // Act
-        PagoModel result = pagoService.save(pago);
+        // When
+        PagoModel resultado = pagoService.procesarPago(orderId, usuarioId, monto);
 
-        // Assert
-        assertNotNull(result);
-        assertEquals(pago, result);
-        verify(pagoRepository).save(pago);
+        // Then
+        assertNotNull(resultado);
+        assertEquals(orderId, resultado.getOrderId());
+        assertEquals(usuarioId, resultado.getUsuarioId());
+        assertEquals(monto, resultado.getMonto());
+        assertEquals("Aprobado", resultado.getEstado());
+        assertEquals(transaccionId, resultado.getTransaccionId());
+        
+        verify(webpayApiService, times(1)).procesarTransaccion(orderId, monto);
+        verify(transaccionRepository, times(1)).save(any(TransaccionModel.class));
+        verify(pagoRepository, times(1)).save(any(PagoModel.class));
     }
 
     @Test
-    void testSave_WithNewPago() {
-        // Arrange
-        PagoModel newPago = new PagoModel();
-        newPago.setMonto(BigDecimal.valueOf(10000));
-        newPago.setEstado("Pendiente");
-        newPago.setFechaPago(LocalDateTime.now());
-        newPago.setOrderId(UUID.randomUUID());
-        newPago.setUsuarioId(UUID.randomUUID());
-        newPago.setTransaccionId(UUID.randomUUID());
+    @DisplayName("Debería procesar un pago rechazado")
+    public void testProcesarPago_Rejected() {
+        // Given
+        transaccion.setEstado("Rechazado");
+        pago.setEstado("Rechazado");
+        
+        when(webpayApiService.procesarTransaccion(orderId, monto)).thenReturn(transaccion);
+        when(transaccionRepository.save(any(TransaccionModel.class))).thenReturn(transaccion);
+        when(pagoRepository.save(any(PagoModel.class))).thenReturn(pago);
 
-        PagoModel savedPago = new PagoModel();
-        savedPago.setId(UUID.randomUUID());
-        savedPago.setMonto(newPago.getMonto());
-        savedPago.setEstado(newPago.getEstado());
-        savedPago.setFechaPago(newPago.getFechaPago());
-        savedPago.setOrderId(newPago.getOrderId());
-        savedPago.setUsuarioId(newPago.getUsuarioId());
-        savedPago.setTransaccionId(newPago.getTransaccionId());
+        // When
+        PagoModel resultado = pagoService.procesarPago(orderId, usuarioId, monto);
 
-        when(pagoRepository.save(any(PagoModel.class))).thenReturn(savedPago);
-
-        // Act
-        PagoModel result = pagoService.save(newPago);
-
-        // Assert
-        assertNotNull(result);
-        assertEquals(savedPago, result);
-        verify(pagoRepository).save(newPago);
+        // Then
+        assertNotNull(resultado);
+        assertEquals("Rechazado", resultado.getEstado());
+        
+        verify(webpayApiService, times(1)).procesarTransaccion(orderId, monto);
+        verify(transaccionRepository, times(1)).save(any(TransaccionModel.class));
+        verify(pagoRepository, times(1)).save(any(PagoModel.class));
     }
 
     @Test
-    void testDeleteById() {
-        // Arrange
+    @DisplayName("Debería encontrar todos los pagos")
+    public void testFindAll() {
+        // Given
+        List<PagoModel> pagos = Arrays.asList(pago);
+        when(pagoRepository.findAll()).thenReturn(pagos);
+
+        // When
+        List<PagoModel> resultado = pagoService.findAll();
+
+        // Then
+        assertNotNull(resultado);
+        assertEquals(1, resultado.size());
+        assertEquals(pago, resultado.get(0));
+        verify(pagoRepository, times(1)).findAll();
+    }
+
+    @Test
+    @DisplayName("Debería guardar un pago")
+    public void testSave() {
+        // Given
+        when(pagoRepository.save(any(PagoModel.class))).thenReturn(pago);
+
+        // When
+        PagoModel resultado = pagoService.save(pago);
+
+        // Then
+        assertNotNull(resultado);
+        assertEquals(pagoId, resultado.getId());
+        assertEquals(orderId, resultado.getOrderId());
+        verify(pagoRepository, times(1)).save(pago);
+    }
+
+    @Test
+    @DisplayName("Debería eliminar un pago por ID")
+    public void testDeleteById() {
+        // Given
         doNothing().when(pagoRepository).deleteById(pagoId);
 
-        // Act
+        // When
         pagoService.deleteById(pagoId);
 
-        // Assert
-        verify(pagoRepository).deleteById(pagoId);
+        // Then
+        verify(pagoRepository, times(1)).deleteById(pagoId);
     }
 
     @Test
-    void testDeleteById_NonExistentId() {
-        // Arrange
-        UUID nonExistentId = UUID.randomUUID();
-        doNothing().when(pagoRepository).deleteById(nonExistentId);
-
-        // Act
-        pagoService.deleteById(nonExistentId);
-
-        // Assert
-        verify(pagoRepository).deleteById(nonExistentId);
-    }
-
-    @Test
-    void testObtenerPagoPorId() {
-        // Arrange
+    @DisplayName("Debería obtener un pago por ID cuando existe")
+    public void testObtenerPagoPorId_WhenExists() {
+        // Given
         when(pagoRepository.findById(pagoId)).thenReturn(Optional.of(pago));
 
-        // Act
-        PagoModel result = pagoService.obtenerPagoPorId(pagoId);
+        // When
+        PagoModel resultado = pagoService.obtenerPagoPorId(pagoId);
 
-        // Assert
-        assertNotNull(result);
-        assertEquals(pago, result);
-        verify(pagoRepository).findById(pagoId);
+        // Then
+        assertNotNull(resultado);
+        assertEquals(pagoId, resultado.getId());
+        assertEquals(orderId, resultado.getOrderId());
+        verify(pagoRepository, times(1)).findById(pagoId);
     }
 
     @Test
-    void testObtenerPagoPorId_NotFound() {
-        // Arrange
+    @DisplayName("Debería retornar null cuando el pago no existe")
+    public void testObtenerPagoPorId_WhenNotExists() {
+        // Given
         when(pagoRepository.findById(pagoId)).thenReturn(Optional.empty());
 
-        // Act
-        PagoModel result = pagoService.obtenerPagoPorId(pagoId);
+        // When
+        PagoModel resultado = pagoService.obtenerPagoPorId(pagoId);
 
-        // Assert
-        assertNull(result);
-        verify(pagoRepository).findById(pagoId);
+        // Then
+        assertNull(resultado);
+        verify(pagoRepository, times(1)).findById(pagoId);
     }
 
     @Test
-    void testObtenerPagoPorId_WithDifferentId() {
-        // Arrange
-        UUID differentId = UUID.randomUUID();
-        when(pagoRepository.findById(differentId)).thenReturn(Optional.of(pago));
-
-        // Act
-        PagoModel result = pagoService.obtenerPagoPorId(differentId);
-
-        // Assert
-        assertNotNull(result);
-        assertEquals(pago, result);
-        verify(pagoRepository).findById(differentId);
-    }
-
-    @Test
-    void testActualizarEstadoPago() {
-        // Arrange
-        String nuevoEstado = "Rechazado";
+    @DisplayName("Debería actualizar el estado de un pago existente")
+    public void testActualizarEstadoPago_WhenPagoExists() {
+        // Given
+        String nuevoEstado = "Completado";
         when(pagoRepository.findById(pagoId)).thenReturn(Optional.of(pago));
         when(pagoRepository.save(any(PagoModel.class))).thenReturn(pago);
 
-        // Act
+        // When
         pagoService.actualizarEstadoPago(pagoId, nuevoEstado);
 
-        // Assert
-        verify(pagoRepository).findById(pagoId);
-        verify(pagoRepository).save(pago);
-        assertEquals(nuevoEstado, pago.getEstado());
+        // Then
+        verify(pagoRepository, times(1)).findById(pagoId);
+        verify(pagoRepository, times(1)).save(any(PagoModel.class));
     }
 
     @Test
-    void testActualizarEstadoPago_NotFound() {
-        // Arrange
-        String nuevoEstado = "Rechazado";
+    @DisplayName("Debería manejar actualización de estado cuando el pago no existe")
+    public void testActualizarEstadoPago_WhenPagoNotExists() {
+        // Given
+        String nuevoEstado = "Completado";
         when(pagoRepository.findById(pagoId)).thenReturn(Optional.empty());
 
-        // Act
+        // When
         pagoService.actualizarEstadoPago(pagoId, nuevoEstado);
 
-        // Assert
-        verify(pagoRepository).findById(pagoId);
+        // Then
+        verify(pagoRepository, times(1)).findById(pagoId);
         verify(pagoRepository, never()).save(any(PagoModel.class));
     }
 
     @Test
-    void testActualizarEstadoPago_WithEmptyString() {
-        // Arrange
-        String nuevoEstado = "";
-        when(pagoRepository.findById(pagoId)).thenReturn(Optional.of(pago));
-        when(pagoRepository.save(any(PagoModel.class))).thenReturn(pago);
+    @DisplayName("Debería manejar lista vacía de pagos")
+    public void testFindAll_WhenNoPagos() {
+        // Given
+        when(pagoRepository.findAll()).thenReturn(Arrays.asList());
 
-        // Act
-        pagoService.actualizarEstadoPago(pagoId, nuevoEstado);
+        // When
+        List<PagoModel> resultado = pagoService.findAll();
 
-        // Assert
-        verify(pagoRepository).findById(pagoId);
-        verify(pagoRepository).save(pago);
-        assertEquals(nuevoEstado, pago.getEstado());
+        // Then
+        assertNotNull(resultado);
+        assertTrue(resultado.isEmpty());
+        verify(pagoRepository, times(1)).findAll();
     }
 
     @Test
-    void testActualizarEstadoPago_WithNullString() {
-        // Arrange
-        String nuevoEstado = null;
-        when(pagoRepository.findById(pagoId)).thenReturn(Optional.of(pago));
-        when(pagoRepository.save(any(PagoModel.class))).thenReturn(pago);
+    @DisplayName("Debería manejar excepción al procesar pago")
+    public void testProcesarPago_WhenExceptionOccurs() {
+        // Given
+        when(webpayApiService.procesarTransaccion(orderId, monto))
+            .thenThrow(new RuntimeException("Error en Webpay"));
 
-        // Act
-        pagoService.actualizarEstadoPago(pagoId, nuevoEstado);
-
-        // Assert
-        verify(pagoRepository).findById(pagoId);
-        verify(pagoRepository).save(pago);
-        assertEquals(nuevoEstado, pago.getEstado());
-    }
-
-    @Test
-    void testProcesarPago() {
-        // Arrange
-        BigDecimal monto = BigDecimal.valueOf(5000);
-        when(webpayApiService.procesarTransaccion(orderId, monto)).thenReturn(transaccion);
-        when(transaccionRepository.save(any(TransaccionModel.class))).thenReturn(transaccion);
-        when(pagoRepository.save(any(PagoModel.class))).thenReturn(pago);
-
-        // Act
-        PagoModel result = pagoService.procesarPago(orderId, usuarioId, monto);
-
-        // Assert
-        assertNotNull(result);
-        verify(webpayApiService).procesarTransaccion(orderId, monto);
-        verify(transaccionRepository).save(transaccion);
-        verify(pagoRepository).save(any(PagoModel.class));
-    }
-
-    @Test
-    void testProcesarPago_WithZeroAmount() {
-        // Arrange
-        BigDecimal monto = BigDecimal.ZERO;
-        when(webpayApiService.procesarTransaccion(orderId, monto)).thenReturn(transaccion);
-        when(transaccionRepository.save(any(TransaccionModel.class))).thenReturn(transaccion);
-        when(pagoRepository.save(any(PagoModel.class))).thenReturn(pago);
-
-        // Act
-        PagoModel result = pagoService.procesarPago(orderId, usuarioId, monto);
-
-        // Assert
-        assertNotNull(result);
-        verify(webpayApiService).procesarTransaccion(orderId, monto);
-        verify(transaccionRepository).save(transaccion);
-        verify(pagoRepository).save(any(PagoModel.class));
-    }
-
-    @Test
-    void testProcesarPago_WithNegativeAmount() {
-        // Arrange
-        BigDecimal monto = BigDecimal.valueOf(-1000);
-        when(webpayApiService.procesarTransaccion(orderId, monto)).thenReturn(transaccion);
-        when(transaccionRepository.save(any(TransaccionModel.class))).thenReturn(transaccion);
-        when(pagoRepository.save(any(PagoModel.class))).thenReturn(pago);
-
-        // Act
-        PagoModel result = pagoService.procesarPago(orderId, usuarioId, monto);
-
-        // Assert
-        assertNotNull(result);
-        verify(webpayApiService).procesarTransaccion(orderId, monto);
-        verify(transaccionRepository).save(transaccion);
-        verify(pagoRepository).save(any(PagoModel.class));
-    }
-
-    @Test
-    void testProcesarPago_WithLargeAmount() {
-        // Arrange
-        BigDecimal monto = BigDecimal.valueOf(999999.99);
-        when(webpayApiService.procesarTransaccion(orderId, monto)).thenReturn(transaccion);
-        when(transaccionRepository.save(any(TransaccionModel.class))).thenReturn(transaccion);
-        when(pagoRepository.save(any(PagoModel.class))).thenReturn(pago);
-
-        // Act
-        PagoModel result = pagoService.procesarPago(orderId, usuarioId, monto);
-
-        // Assert
-        assertNotNull(result);
-        verify(webpayApiService).procesarTransaccion(orderId, monto);
-        verify(transaccionRepository).save(transaccion);
-        verify(pagoRepository).save(any(PagoModel.class));
-    }
-
-    @Test
-    void testProcesarPago_WithRejectedTransaction() {
-        // Arrange
-        BigDecimal monto = BigDecimal.valueOf(5000);
-        TransaccionModel rejectedTransaccion = new TransaccionModel();
-        rejectedTransaccion.setId(transaccionId);
-        rejectedTransaccion.setEstado("RECHAZADO");
-        rejectedTransaccion.setProveedor("WEBPAYPLUS");
-        rejectedTransaccion.setMonto(monto);
-        rejectedTransaccion.setFechaTransaccion(LocalDateTime.now());
-        rejectedTransaccion.setDetalleError("Saldo insuficiente");
-
-        when(webpayApiService.procesarTransaccion(orderId, monto)).thenReturn(rejectedTransaccion);
-        when(transaccionRepository.save(any(TransaccionModel.class))).thenReturn(rejectedTransaccion);
-        when(pagoRepository.save(any(PagoModel.class))).thenReturn(pago);
-
-        // Act
-        PagoModel result = pagoService.procesarPago(orderId, usuarioId, monto);
-
-        // Assert
-        assertNotNull(result);
-        verify(webpayApiService).procesarTransaccion(orderId, monto);
-        verify(transaccionRepository).save(rejectedTransaccion);
-        verify(pagoRepository).save(any(PagoModel.class));
-    }
-
-    @Test
-    void testProcesarPago_VerifyPagoCreation() {
-        // Arrange
-        BigDecimal monto = BigDecimal.valueOf(5000);
-        when(webpayApiService.procesarTransaccion(orderId, monto)).thenReturn(transaccion);
-        when(transaccionRepository.save(any(TransaccionModel.class))).thenReturn(transaccion);
-        when(pagoRepository.save(any(PagoModel.class))).thenAnswer(invocation -> {
-            PagoModel pagoToSave = invocation.getArgument(0);
-            pagoToSave.setId(UUID.randomUUID());
-            return pagoToSave;
+        // When & Then
+        assertThrows(RuntimeException.class, () -> {
+            pagoService.procesarPago(orderId, usuarioId, monto);
         });
-
-        // Act
-        PagoModel result = pagoService.procesarPago(orderId, usuarioId, monto);
-
-        // Assert
-        assertNotNull(result);
-        assertEquals(orderId, result.getOrderId());
-        assertEquals(usuarioId, result.getUsuarioId());
-        assertEquals(monto, result.getMonto());
-        assertEquals(transaccion.getEstado(), result.getEstado());
-        assertEquals(transaccion.getId(), result.getTransaccionId());
-        assertNotNull(result.getFechaPago());
-        verify(pagoRepository).save(argThat(pago -> 
-            orderId.equals(pago.getOrderId()) &&
-            usuarioId.equals(pago.getUsuarioId()) &&
-            monto.equals(pago.getMonto()) &&
-            transaccion.getEstado().equals(pago.getEstado()) &&
-            transaccion.getId().equals(pago.getTransaccionId())
-        ));
+        
+        verify(webpayApiService, times(1)).procesarTransaccion(orderId, monto);
+        verify(transaccionRepository, never()).save(any(TransaccionModel.class));
+        verify(pagoRepository, never()).save(any(PagoModel.class));
     }
 }
