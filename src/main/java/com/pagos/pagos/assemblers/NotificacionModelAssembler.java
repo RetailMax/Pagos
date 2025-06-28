@@ -7,6 +7,7 @@ import static org.springframework.hateoas.server.mvc.WebMvcLinkBuilder.methodOn;
 import org.springframework.stereotype.Component;
 
 import com.pagos.pagos.controller.NotificacionControllerV2;
+import com.pagos.pagos.controller.UsuarioControllerV2;
 import com.pagos.pagos.model.NotificacionModel;
 
 @Component
@@ -19,8 +20,16 @@ public class NotificacionModelAssembler implements RepresentationModelAssembler<
         }
 
         return EntityModel.of(notificacion,
+                // Links básicos
                 linkTo(methodOn(NotificacionControllerV2.class).getNotificacionById(notificacion.getId())).withSelfRel(),
-                linkTo(methodOn(NotificacionControllerV2.class).getAllNotificaciones()).withRel("notificaciones")
+                linkTo(methodOn(NotificacionControllerV2.class).getAllNotificaciones()).withRel("notificaciones"),
+                
+                // Links de navegación a recursos relacionados
+                linkTo(methodOn(UsuarioControllerV2.class).getUsuarioById(notificacion.getDestinatarioId())).withRel("destinatario"),
+                
+                // Links de acciones
+                linkTo(methodOn(NotificacionControllerV2.class).updateNotificacion(notificacion.getId(), notificacion)).withRel("update"),
+                linkTo(methodOn(NotificacionControllerV2.class).deleteNotificacion(notificacion.getId())).withRel("delete")
         );
     }
 }
