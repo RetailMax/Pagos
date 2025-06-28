@@ -34,7 +34,7 @@ import io.swagger.v3.oas.annotations.tags.Tag;
 
 @RestController
 @RequestMapping("/api/v2/pagos")
-@Tag(name = "Pagos", description = "API para gestión de pagos")
+@Tag(name = "Pagos", description = "Metodos para gestión de pagos")
 public class PagoControllerV2 {
 
     @Autowired

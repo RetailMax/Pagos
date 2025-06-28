@@ -34,7 +34,7 @@ import io.swagger.v3.oas.annotations.tags.Tag;
 
 @RestController
 @RequestMapping(value = "/api/v2/usuarios", produces = MediaTypes.HAL_JSON_VALUE)
-@Tag(name = "Usuarios", description = "API para gestión completa de usuarios del sistema de pagos. Permite crear, consultar, actualizar y eliminar usuarios")
+@Tag(name = "Usuarios", description = "Metodos para gestión de usuarios del sistema de pagos")
 public class UsuarioControllerV2 {
 
     private final UsuarioService usuarioService;
