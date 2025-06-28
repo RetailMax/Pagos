@@ -27,7 +27,7 @@ import io.swagger.v3.oas.annotations.tags.Tag;
 
 @RestController
 @RequestMapping("/api/v2/reembolsos")
-@Tag(name = "Reembolsos", description = "API para gestión de reembolsos")
+@Tag(name = "Reembolsos", description = "Metodos para gestión de reembolsos")
 public class ReembolsoControllerV2 {
 
     private final ReembolsoService reembolsoService;

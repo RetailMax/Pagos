@@ -34,7 +34,7 @@ import io.swagger.v3.oas.annotations.tags.Tag;
 
 @RestController
 @RequestMapping(value = "/api/v2/transacciones", produces = MediaTypes.HAL_JSON_VALUE)
-@Tag(name = "Transacciones", description = "API para gestión de transacciones de pago")
+@Tag(name = "Transacciones", description = "Metodos para gestión de transacciones de pago")
 public class TransaccionControllerV2 {
 
     private final TransaccionService transaccionService;
