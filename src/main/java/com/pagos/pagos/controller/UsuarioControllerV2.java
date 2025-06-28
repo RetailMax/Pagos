@@ -24,8 +24,17 @@ import com.pagos.pagos.assemblers.UsuarioModelAssembler;
 import com.pagos.pagos.model.UsuarioModel;
 import com.pagos.pagos.services.UsuarioService;
 
+import io.swagger.v3.oas.annotations.Operation;
+import io.swagger.v3.oas.annotations.Parameter;
+import io.swagger.v3.oas.annotations.media.Content;
+import io.swagger.v3.oas.annotations.media.Schema;
+import io.swagger.v3.oas.annotations.responses.ApiResponse;
+import io.swagger.v3.oas.annotations.responses.ApiResponses;
+import io.swagger.v3.oas.annotations.tags.Tag;
+
 @RestController
 @RequestMapping(value = "/api/v2/usuarios", produces = MediaTypes.HAL_JSON_VALUE)
+@Tag(name = "Usuarios", description = "API para gestión completa de usuarios del sistema de pagos. Permite crear, consultar, actualizar y eliminar usuarios")
 public class UsuarioControllerV2 {
 
     private final UsuarioService usuarioService;
@@ -38,6 +47,15 @@ public class UsuarioControllerV2 {
     }
     //Lista usuarios
     @GetMapping(produces = MediaTypes.HAL_JSON_VALUE)
+    @Operation(
+        summary = "Obtener todos los usuarios",
+        description = "Retorna una lista de todos los usuarios registrados en el sistema"
+    )
+    @ApiResponses(value = {
+        @ApiResponse(responseCode = "200", description = "Lista de usuarios obtenida exitosamente",
+                    content = @Content(mediaType = "application/hal+json",
+                    schema = @Schema(implementation = UsuarioModel.class)))
+    })
     public CollectionModel<EntityModel<UsuarioModel>> getAllUsuarios() {
         List<EntityModel<UsuarioModel>> usuarios = usuarioService.findAll().stream()
                 .map(assembler::toModel)
@@ -48,7 +66,19 @@ public class UsuarioControllerV2 {
     }
     //Busca usuario por su uuid
     @GetMapping(value = "/{id}", produces = MediaTypes.HAL_JSON_VALUE)
-    public ResponseEntity<EntityModel<UsuarioModel>> getUsuarioById(@PathVariable UUID id) {
+    @Operation(
+        summary = "Obtener usuario por ID",
+        description = "Retorna un usuario específico basado en su UUID"
+    )
+    @ApiResponses(value = {
+        @ApiResponse(responseCode = "200", description = "Usuario encontrado exitosamente",
+                    content = @Content(mediaType = "application/hal+json",
+                    schema = @Schema(implementation = UsuarioModel.class))),
+        @ApiResponse(responseCode = "404", description = "Usuario no encontrado")
+    })
+    public ResponseEntity<EntityModel<UsuarioModel>> getUsuarioById(
+            @Parameter(description = "ID único del usuario", example = "123e4567-e89b-12d3-a456-426614174000")
+            @PathVariable UUID id) {
         return usuarioService.findById(id)
                 .map(assembler::toModel)
                 .map(ResponseEntity::ok)
@@ -56,7 +86,19 @@ public class UsuarioControllerV2 {
     }
     //Crea usuario
     @PostMapping(produces = MediaTypes.HAL_JSON_VALUE)
-    public ResponseEntity<EntityModel<UsuarioModel>> createUsuario(@RequestBody UsuarioModel usuario) {
+    @Operation(
+        summary = "Crear nuevo usuario",
+        description = "Crea un nuevo usuario en el sistema"
+    )
+    @ApiResponses(value = {
+        @ApiResponse(responseCode = "201", description = "Usuario creado exitosamente",
+                    content = @Content(mediaType = "application/hal+json",
+                    schema = @Schema(implementation = UsuarioModel.class))),
+        @ApiResponse(responseCode = "400", description = "Datos de usuario inválidos")
+    })
+    public ResponseEntity<EntityModel<UsuarioModel>> createUsuario(
+            @Parameter(description = "Datos del usuario a crear")
+            @RequestBody UsuarioModel usuario) {
         UsuarioModel nuevo = usuarioService.save(usuario);
         return ResponseEntity
                 .created(linkTo(methodOn(UsuarioControllerV2.class).getUsuarioById(nuevo.getId())).toUri())
@@ -64,14 +106,40 @@ public class UsuarioControllerV2 {
     }
     //Actualiza usuario
     @PutMapping(value = "/{id}", produces = MediaTypes.HAL_JSON_VALUE)
-    public ResponseEntity<EntityModel<UsuarioModel>> updateUsuario(@PathVariable UUID id, @RequestBody UsuarioModel usuario) {
+    @Operation(
+        summary = "Actualizar usuario existente",
+        description = "Actualiza los datos de un usuario existente"
+    )
+    @ApiResponses(value = {
+        @ApiResponse(responseCode = "200", description = "Usuario actualizado exitosamente",
+                    content = @Content(mediaType = "application/hal+json",
+                    schema = @Schema(implementation = UsuarioModel.class))),
+        @ApiResponse(responseCode = "400", description = "Datos de usuario inválidos o incompletos"),
+        @ApiResponse(responseCode = "404", description = "Usuario no encontrado con el ID proporcionado"),
+        @ApiResponse(responseCode = "409", description = "Conflicto: Email duplicado con otro usuario")
+    })
+    public ResponseEntity<EntityModel<UsuarioModel>> updateUsuario(
+            @Parameter(description = "ID único del usuario a actualizar", example = "123e4567-e89b-12d3-a456-426614174000")
+            @PathVariable UUID id,
+            @Parameter(description = "Datos actualizados del usuario")
+            @RequestBody UsuarioModel usuario) {
         usuario.setId(id);
         UsuarioModel actualizado = usuarioService.save(usuario);
         return ResponseEntity.ok(assembler.toModel(actualizado));
     }
     //elimina usuario
     @DeleteMapping(value = "/{id}", produces = MediaTypes.HAL_JSON_VALUE)
-    public ResponseEntity<?> deleteUsuario(@PathVariable UUID id) {
+    @Operation(
+        summary = "Eliminar usuario",
+        description = "Elimina un usuario del sistema"
+    )
+    @ApiResponses(value = {
+        @ApiResponse(responseCode = "204", description = "Usuario eliminado exitosamente"),
+        @ApiResponse(responseCode = "404", description = "Usuario no encontrado")
+    })
+    public ResponseEntity<?> deleteUsuario(
+            @Parameter(description = "ID único del usuario a eliminar", example = "123e4567-e89b-12d3-a456-426614174000")
+            @PathVariable UUID id) {
         usuarioService.deleteById(id);
         return ResponseEntity.noContent().build();
     }

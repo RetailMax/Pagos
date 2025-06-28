@@ -24,8 +24,17 @@ import com.pagos.pagos.assemblers.TransaccionModelAssembler;
 import com.pagos.pagos.model.TransaccionModel;
 import com.pagos.pagos.services.TransaccionService;
 
+import io.swagger.v3.oas.annotations.Operation;
+import io.swagger.v3.oas.annotations.Parameter;
+import io.swagger.v3.oas.annotations.media.Content;
+import io.swagger.v3.oas.annotations.media.Schema;
+import io.swagger.v3.oas.annotations.responses.ApiResponse;
+import io.swagger.v3.oas.annotations.responses.ApiResponses;
+import io.swagger.v3.oas.annotations.tags.Tag;
+
 @RestController
 @RequestMapping(value = "/api/v2/transacciones", produces = MediaTypes.HAL_JSON_VALUE)
+@Tag(name = "Transacciones", description = "API para gestión de transacciones de pago")
 public class TransaccionControllerV2 {
 
     private final TransaccionService transaccionService;
@@ -38,6 +47,15 @@ public class TransaccionControllerV2 {
     }
 
     @GetMapping(produces = MediaTypes.HAL_JSON_VALUE)
+    @Operation(
+        summary = "Obtener todas las transacciones",
+        description = "Retorna una lista de todas las transacciones registradas en el sistema"
+    )
+    @ApiResponses(value = {
+        @ApiResponse(responseCode = "200", description = "Lista de transacciones obtenida exitosamente",
+                    content = @Content(mediaType = "application/hal+json",
+                    schema = @Schema(implementation = TransaccionModel.class)))
+    })
     public CollectionModel<EntityModel<TransaccionModel>> getAllTransacciones() {
         List<EntityModel<TransaccionModel>> transacciones = transaccionService.findAll().stream()
                 .map(assembler::toModel)
@@ -48,7 +66,19 @@ public class TransaccionControllerV2 {
     }
 
     @GetMapping(value = "/{id}", produces = MediaTypes.HAL_JSON_VALUE)
-    public ResponseEntity<EntityModel<TransaccionModel>> getTransaccionById(@PathVariable UUID id) {
+    @Operation(
+        summary = "Obtener transacción por ID",
+        description = "Retorna una transacción específica basada en su identificador único"
+    )
+    @ApiResponses(value = {
+        @ApiResponse(responseCode = "200", description = "Transacción encontrada exitosamente",
+                    content = @Content(mediaType = "application/hal+json",
+                    schema = @Schema(implementation = TransaccionModel.class))),
+        @ApiResponse(responseCode = "404", description = "Transacción no encontrada")
+    })
+    public ResponseEntity<EntityModel<TransaccionModel>> getTransaccionById(
+            @Parameter(description = "ID único de la transacción", example = "123e4567-e89b-12d3-a456-426614174000")
+            @PathVariable UUID id) {
         return transaccionService.findById(id)
                 .map(assembler::toModel)
                 .map(ResponseEntity::ok)
@@ -56,7 +86,19 @@ public class TransaccionControllerV2 {
     }
 
     @PostMapping
-    public ResponseEntity<EntityModel<TransaccionModel>> createTransaccion(@RequestBody TransaccionModel transaccion) {
+    @Operation(
+        summary = "Crear nueva transacción",
+        description = "Crea una nueva transacción en el sistema"
+    )
+    @ApiResponses(value = {
+        @ApiResponse(responseCode = "201", description = "Transacción creada exitosamente",
+                    content = @Content(mediaType = "application/hal+json",
+                    schema = @Schema(implementation = TransaccionModel.class))),
+        @ApiResponse(responseCode = "400", description = "Datos de transacción inválidos")
+    })
+    public ResponseEntity<EntityModel<TransaccionModel>> createTransaccion(
+            @Parameter(description = "Datos de la transacción a crear")
+            @RequestBody TransaccionModel transaccion) {
         TransaccionModel nueva = transaccionService.save(transaccion);
         return ResponseEntity
                 .created(linkTo(methodOn(TransaccionControllerV2.class).getTransaccionById(nueva.getId())).toUri())
@@ -64,14 +106,39 @@ public class TransaccionControllerV2 {
     }
 
     @PutMapping(value = "/{id}", produces = MediaTypes.HAL_JSON_VALUE)
-    public ResponseEntity<EntityModel<TransaccionModel>> updateTransaccion(@PathVariable UUID id, @RequestBody TransaccionModel transaccion) {
+    @Operation(
+        summary = "Actualizar transacción existente",
+        description = "Actualiza los datos de una transacción existente"
+    )
+    @ApiResponses(value = {
+        @ApiResponse(responseCode = "200", description = "Transacción actualizada exitosamente",
+                    content = @Content(mediaType = "application/hal+json",
+                    schema = @Schema(implementation = TransaccionModel.class))),
+        @ApiResponse(responseCode = "400", description = "Datos de transacción inválidos"),
+        @ApiResponse(responseCode = "404", description = "Transacción no encontrada")
+    })
+    public ResponseEntity<EntityModel<TransaccionModel>> updateTransaccion(
+            @Parameter(description = "ID único de la transacción a actualizar", example = "123e4567-e89b-12d3-a456-426614174000")
+            @PathVariable UUID id,
+            @Parameter(description = "Datos actualizados de la transacción")
+            @RequestBody TransaccionModel transaccion) {
         transaccion.setId(id);
         TransaccionModel actualizada = transaccionService.save(transaccion);
         return ResponseEntity.ok(assembler.toModel(actualizada));
     }
 
     @DeleteMapping(value = "/{id}", produces = MediaTypes.HAL_JSON_VALUE)
-    public ResponseEntity<?> deleteTransaccion(@PathVariable UUID id) {
+    @Operation(
+        summary = "Eliminar transacción",
+        description = "Elimina una transacción del sistema"
+    )
+    @ApiResponses(value = {
+        @ApiResponse(responseCode = "204", description = "Transacción eliminada exitosamente"),
+        @ApiResponse(responseCode = "404", description = "Transacción no encontrada")
+    })
+    public ResponseEntity<?> deleteTransaccion(
+            @Parameter(description = "ID único de la transacción a eliminar", example = "123e4567-e89b-12d3-a456-426614174000")
+            @PathVariable UUID id) {
         transaccionService.deleteById(id);
         return ResponseEntity.noContent().build();
     }
