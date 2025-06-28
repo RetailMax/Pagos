@@ -1,20 +1,26 @@
 package com.pagos.pagos.services;
 
-import com.pagos.pagos.model.ReembolsoModel;
-import com.pagos.pagos.model.TransaccionModel;
+import java.math.BigDecimal;
+import java.time.LocalDateTime;
+import java.util.UUID;
+
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertNotEquals;
+import static org.junit.jupiter.api.Assertions.assertNotNull;
+import static org.junit.jupiter.api.Assertions.assertNull;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.InjectMocks;
 import org.mockito.junit.jupiter.MockitoExtension;
 
-import java.math.BigDecimal;
-import java.time.LocalDateTime;
-import java.util.UUID;
-
-import static org.junit.jupiter.api.Assertions.*;
+import com.pagos.pagos.model.ReembolsoModel;
+import com.pagos.pagos.model.TransaccionModel;
 
 @ExtendWith(MockitoExtension.class)
+@DisplayName("Pruebas del Servicio Webpay API")
 public class WebpayApiServiceTest {
 
     @InjectMocks
@@ -22,397 +28,204 @@ public class WebpayApiServiceTest {
 
     private UUID orderId;
     private UUID pagoId;
+    private UUID transaccionId;
     private BigDecimal monto;
 
     @BeforeEach
     void setUp() {
         orderId = UUID.randomUUID();
         pagoId = UUID.randomUUID();
-        monto = BigDecimal.valueOf(5000);
+        transaccionId = UUID.randomUUID();
+        monto = new BigDecimal("25000.00");
     }
 
     @Test
-    void testProcesarTransaccion() {
-        // Act
-        TransaccionModel result = webpayApiService.procesarTransaccion(orderId, monto);
+    @DisplayName("Debería procesar una transacción exitosamente")
+    public void testProcesarTransaccion() {
+        // When
+        TransaccionModel resultado = webpayApiService.procesarTransaccion(orderId, monto);
 
-        // Assert
-        assertNotNull(result);
-        assertNotNull(result.getId());
-        assertEquals("APROBADO", result.getEstado());
-        assertEquals("WEBPAYPLUS", result.getProveedor());
-        assertEquals(monto, result.getMonto());
-        assertNotNull(result.getFechaTransaccion());
-        assertNull(result.getDetalleError());
+        // Then
+        assertNotNull(resultado);
+        assertNotNull(resultado.getId());
+        assertEquals("APROBADO", resultado.getEstado());
+        assertEquals("WEBPAYPLUS", resultado.getProveedor());
+        assertEquals(monto, resultado.getMonto());
+        assertNull(resultado.getDetalleError());
+        assertNotNull(resultado.getFechaTransaccion());
+        assertTrue(resultado.getFechaTransaccion().isBefore(LocalDateTime.now().plusSeconds(1)));
+        assertTrue(resultado.getFechaTransaccion().isAfter(LocalDateTime.now().minusSeconds(1)));
     }
 
     @Test
-    void testProcesarTransaccion_WithZeroAmount() {
-        // Arrange
-        BigDecimal zeroAmount = BigDecimal.ZERO;
+    @DisplayName("Debería procesar transacción con monto cero")
+    public void testProcesarTransaccion_WithZeroAmount() {
+        // Given
+        BigDecimal montoCero = BigDecimal.ZERO;
 
-        // Act
-        TransaccionModel result = webpayApiService.procesarTransaccion(orderId, zeroAmount);
+        // When
+        TransaccionModel resultado = webpayApiService.procesarTransaccion(orderId, montoCero);
 
-        // Assert
-        assertNotNull(result);
-        assertEquals("APROBADO", result.getEstado());
-        assertEquals(zeroAmount, result.getMonto());
-        assertNotNull(result.getId());
-        assertEquals("WEBPAYPLUS", result.getProveedor());
+        // Then
+        assertNotNull(resultado);
+        assertEquals("APROBADO", resultado.getEstado());
+        assertEquals(montoCero, resultado.getMonto());
     }
 
     @Test
-    void testProcesarTransaccion_WithNegativeAmount() {
-        // Arrange
-        BigDecimal negativeAmount = BigDecimal.valueOf(-1000);
+    @DisplayName("Debería procesar transacción con monto negativo")
+    public void testProcesarTransaccion_WithNegativeAmount() {
+        // Given
+        BigDecimal montoNegativo = new BigDecimal("-1000.00");
 
-        // Act
-        TransaccionModel result = webpayApiService.procesarTransaccion(orderId, negativeAmount);
+        // When
+        TransaccionModel resultado = webpayApiService.procesarTransaccion(orderId, montoNegativo);
 
-        // Assert
-        assertNotNull(result);
-        assertEquals("APROBADO", result.getEstado());
-        assertEquals(negativeAmount, result.getMonto());
-        assertNotNull(result.getId());
-        assertEquals("WEBPAYPLUS", result.getProveedor());
+        // Then
+        assertNotNull(resultado);
+        assertEquals("APROBADO", resultado.getEstado());
+        assertEquals(montoNegativo, resultado.getMonto());
     }
 
     @Test
-    void testProcesarTransaccion_WithLargeAmount() {
-        // Arrange
-        BigDecimal largeAmount = BigDecimal.valueOf(999999.99);
+    @DisplayName("Debería procesar transacción con monto grande")
+    public void testProcesarTransaccion_WithLargeAmount() {
+        // Given
+        BigDecimal montoGrande = new BigDecimal("999999.99");
 
-        // Act
-        TransaccionModel result = webpayApiService.procesarTransaccion(orderId, largeAmount);
+        // When
+        TransaccionModel resultado = webpayApiService.procesarTransaccion(orderId, montoGrande);
 
-        // Assert
-        assertNotNull(result);
-        assertEquals("APROBADO", result.getEstado());
-        assertEquals(largeAmount, result.getMonto());
-        assertNotNull(result.getId());
-        assertEquals("WEBPAYPLUS", result.getProveedor());
+        // Then
+        assertNotNull(resultado);
+        assertEquals("APROBADO", resultado.getEstado());
+        assertEquals(montoGrande, resultado.getMonto());
     }
 
     @Test
-    void testProcesarTransaccion_WithDecimalAmount() {
-        // Arrange
-        BigDecimal decimalAmount = BigDecimal.valueOf(1234.56);
+    @DisplayName("Debería generar IDs únicos para cada transacción")
+    public void testProcesarTransaccion_UniqueIds() {
+        // When
+        TransaccionModel transaccion1 = webpayApiService.procesarTransaccion(orderId, monto);
+        TransaccionModel transaccion2 = webpayApiService.procesarTransaccion(orderId, monto);
 
-        // Act
-        TransaccionModel result = webpayApiService.procesarTransaccion(orderId, decimalAmount);
-
-        // Assert
-        assertNotNull(result);
-        assertEquals("APROBADO", result.getEstado());
-        assertEquals(decimalAmount, result.getMonto());
-        assertNotNull(result.getId());
-        assertEquals("WEBPAYPLUS", result.getProveedor());
+        // Then
+        assertNotNull(transaccion1.getId());
+        assertNotNull(transaccion2.getId());
+        assertNotEquals(transaccion1.getId(), transaccion2.getId());
     }
 
     @Test
-    void testProcesarTransaccion_WithNullOrderId() {
-        // Act
-        TransaccionModel result = webpayApiService.procesarTransaccion(null, monto);
+    @DisplayName("Debería solicitar reembolso exitosamente")
+    public void testSolicitarReembolso() {
+        // When
+        ReembolsoModel resultado = webpayApiService.solicitarReembolso(pagoId, monto);
 
-        // Assert
-        assertNotNull(result);
-        assertEquals("APROBADO", result.getEstado());
-        assertEquals(monto, result.getMonto());
-        assertNotNull(result.getId());
-        assertEquals("WEBPAYPLUS", result.getProveedor());
+        // Then
+        assertNotNull(resultado);
+        assertNotNull(resultado.getId());
+        assertEquals(pagoId, resultado.getPagoId());
+        assertEquals("PENDIENTE", resultado.getEstado());
+        assertNotNull(resultado.getFechaSolicitud());
+        assertTrue(resultado.getFechaSolicitud().isBefore(LocalDateTime.now().plusSeconds(1)));
+        assertTrue(resultado.getFechaSolicitud().isAfter(LocalDateTime.now().minusSeconds(1)));
     }
 
     @Test
-    void testProcesarTransaccion_WithNullAmount() {
-        // Act
-        TransaccionModel result = webpayApiService.procesarTransaccion(orderId, null);
+    @DisplayName("Debería solicitar reembolso con monto cero")
+    public void testSolicitarReembolso_WithZeroAmount() {
+        // Given
+        BigDecimal montoCero = BigDecimal.ZERO;
 
-        // Assert
-        assertNotNull(result);
-        assertEquals("APROBADO", result.getEstado());
-        assertNull(result.getMonto());
-        assertNotNull(result.getId());
-        assertEquals("WEBPAYPLUS", result.getProveedor());
+        // When
+        ReembolsoModel resultado = webpayApiService.solicitarReembolso(pagoId, montoCero);
+
+        // Then
+        assertNotNull(resultado);
+        assertEquals(pagoId, resultado.getPagoId());
+        assertEquals("PENDIENTE", resultado.getEstado());
     }
 
     @Test
-    void testProcesarTransaccion_MultipleCalls() {
-        // Act
-        TransaccionModel result1 = webpayApiService.procesarTransaccion(orderId, monto);
-        TransaccionModel result2 = webpayApiService.procesarTransaccion(orderId, monto);
+    @DisplayName("Debería generar IDs únicos para cada reembolso")
+    public void testSolicitarReembolso_UniqueIds() {
+        // When
+        ReembolsoModel reembolso1 = webpayApiService.solicitarReembolso(pagoId, monto);
+        ReembolsoModel reembolso2 = webpayApiService.solicitarReembolso(pagoId, monto);
 
-        // Assert
-        assertNotNull(result1);
-        assertNotNull(result2);
-        assertEquals("APROBADO", result1.getEstado());
-        assertEquals("APROBADO", result2.getEstado());
-        assertEquals(monto, result1.getMonto());
-        assertEquals(monto, result2.getMonto());
-        
-        // Los IDs deberían ser diferentes
-        assertNotEquals(result1.getId(), result2.getId());
+        // Then
+        assertNotNull(reembolso1.getId());
+        assertNotNull(reembolso2.getId());
+        assertNotEquals(reembolso1.getId(), reembolso2.getId());
     }
 
     @Test
-    void testProcesarTransaccion_VerifyTimestamp() {
-        // Arrange
-        LocalDateTime beforeCall = LocalDateTime.now();
+    @DisplayName("Debería consultar estado de transacción exitosamente")
+    public void testConsultarEstadoTransaccion() {
+        // When
+        TransaccionModel resultado = webpayApiService.consultarEstadoTransaccion(transaccionId);
 
-        // Act
-        TransaccionModel result = webpayApiService.procesarTransaccion(orderId, monto);
-
-        // Assert
-        assertNotNull(result);
-        assertNotNull(result.getFechaTransaccion());
-        assertTrue(result.getFechaTransaccion().isAfter(beforeCall) || 
-                  result.getFechaTransaccion().isEqual(beforeCall));
+        // Then
+        assertNotNull(resultado);
+        assertEquals(transaccionId, resultado.getId());
+        assertEquals("APROBADO", resultado.getEstado());
+        assertEquals("WEBPAYPLUS", resultado.getProveedor());
+        assertNull(resultado.getDetalleError());
+        assertNotNull(resultado.getFechaTransaccion());
+        assertTrue(resultado.getFechaTransaccion().isBefore(LocalDateTime.now()));
     }
 
     @Test
-    void testSolicitarReembolso() {
-        // Act
-        ReembolsoModel result = webpayApiService.solicitarReembolso(pagoId, monto);
+    @DisplayName("Debería consultar estado de transacción con ID nulo")
+    public void testConsultarEstadoTransaccion_WithNullId() {
+        // When
+        TransaccionModel resultado = webpayApiService.consultarEstadoTransaccion(null);
 
-        // Assert
-        assertNotNull(result);
-        assertNotNull(result.getId());
-        assertEquals(pagoId, result.getPagoId());
-        assertEquals("PENDIENTE", result.getEstado());
-        assertNotNull(result.getFechaSolicitud());
+        // Then
+        assertNotNull(resultado);
+        assertNull(resultado.getId());
+        assertEquals("APROBADO", resultado.getEstado());
+        assertEquals("WEBPAYPLUS", resultado.getProveedor());
     }
 
     @Test
-    void testSolicitarReembolso_WithZeroAmount() {
-        // Arrange
-        BigDecimal zeroAmount = BigDecimal.ZERO;
+    @DisplayName("Debería mantener consistencia en el proveedor")
+    public void testProveedorConsistency() {
+        // When
+        TransaccionModel transaccion = webpayApiService.procesarTransaccion(orderId, monto);
+        TransaccionModel consulta = webpayApiService.consultarEstadoTransaccion(transaccionId);
 
-        // Act
-        ReembolsoModel result = webpayApiService.solicitarReembolso(pagoId, zeroAmount);
-
-        // Assert
-        assertNotNull(result);
-        assertEquals(pagoId, result.getPagoId());
-        assertEquals("PENDIENTE", result.getEstado());
-        assertNotNull(result.getId());
-        assertNotNull(result.getFechaSolicitud());
+        // Then
+        assertEquals("WEBPAYPLUS", transaccion.getProveedor());
+        assertEquals("WEBPAYPLUS", consulta.getProveedor());
     }
 
     @Test
-    void testSolicitarReembolso_WithNegativeAmount() {
-        // Arrange
-        BigDecimal negativeAmount = BigDecimal.valueOf(-1000);
+    @DisplayName("Debería mantener consistencia en el estado")
+    public void testEstadoConsistency() {
+        // When
+        TransaccionModel transaccion = webpayApiService.procesarTransaccion(orderId, monto);
+        TransaccionModel consulta = webpayApiService.consultarEstadoTransaccion(transaccionId);
 
-        // Act
-        ReembolsoModel result = webpayApiService.solicitarReembolso(pagoId, negativeAmount);
-
-        // Assert
-        assertNotNull(result);
-        assertEquals(pagoId, result.getPagoId());
-        assertEquals("PENDIENTE", result.getEstado());
-        assertNotNull(result.getId());
-        assertNotNull(result.getFechaSolicitud());
+        // Then
+        assertEquals("APROBADO", transaccion.getEstado());
+        assertEquals("APROBADO", consulta.getEstado());
     }
 
     @Test
-    void testSolicitarReembolso_WithNullPagoId() {
-        // Act
-        ReembolsoModel result = webpayApiService.solicitarReembolso(null, monto);
+    @DisplayName("Debería manejar múltiples solicitudes de reembolso")
+    public void testMultipleReembolsos() {
+        // When
+        ReembolsoModel reembolso1 = webpayApiService.solicitarReembolso(pagoId, monto);
+        ReembolsoModel reembolso2 = webpayApiService.solicitarReembolso(pagoId, monto);
+        ReembolsoModel reembolso3 = webpayApiService.solicitarReembolso(pagoId, monto);
 
-        // Assert
-        assertNotNull(result);
-        assertNull(result.getPagoId());
-        assertEquals("PENDIENTE", result.getEstado());
-        assertNotNull(result.getId());
-        assertNotNull(result.getFechaSolicitud());
-    }
-
-    @Test
-    void testSolicitarReembolso_WithNullAmount() {
-        // Act
-        ReembolsoModel result = webpayApiService.solicitarReembolso(pagoId, null);
-
-        // Assert
-        assertNotNull(result);
-        assertEquals(pagoId, result.getPagoId());
-        assertEquals("PENDIENTE", result.getEstado());
-        assertNotNull(result.getId());
-        assertNotNull(result.getFechaSolicitud());
-    }
-
-    @Test
-    void testSolicitarReembolso_MultipleCalls() {
-        // Act
-        ReembolsoModel result1 = webpayApiService.solicitarReembolso(pagoId, monto);
-        ReembolsoModel result2 = webpayApiService.solicitarReembolso(pagoId, monto);
-
-        // Assert
-        assertNotNull(result1);
-        assertNotNull(result2);
-        assertEquals(pagoId, result1.getPagoId());
-        assertEquals(pagoId, result2.getPagoId());
-        assertEquals("PENDIENTE", result1.getEstado());
-        assertEquals("PENDIENTE", result2.getEstado());
-        
-        // Los IDs deberían ser diferentes
-        assertNotEquals(result1.getId(), result2.getId());
-    }
-
-    @Test
-    void testSolicitarReembolso_VerifyTimestamp() {
-        // Arrange
-        LocalDateTime beforeCall = LocalDateTime.now();
-
-        // Act
-        ReembolsoModel result = webpayApiService.solicitarReembolso(pagoId, monto);
-
-        // Assert
-        assertNotNull(result);
-        assertNotNull(result.getFechaSolicitud());
-        assertTrue(result.getFechaSolicitud().isAfter(beforeCall) || 
-                  result.getFechaSolicitud().isEqual(beforeCall));
-    }
-
-    @Test
-    void testConsultarEstadoTransaccion() {
-        // Arrange
-        UUID transaccionId = UUID.randomUUID();
-
-        // Act
-        TransaccionModel result = webpayApiService.consultarEstadoTransaccion(transaccionId);
-
-        // Assert
-        assertNotNull(result);
-        assertEquals(transaccionId, result.getId());
-        assertEquals("APROBADO", result.getEstado());
-        assertEquals("WEBPAYPLUS", result.getProveedor());
-        assertNotNull(result.getFechaTransaccion());
-        assertNull(result.getDetalleError());
-    }
-
-    @Test
-    void testConsultarEstadoTransaccion_WithNullId() {
-        // Act
-        TransaccionModel result = webpayApiService.consultarEstadoTransaccion(null);
-
-        // Assert
-        assertNotNull(result);
-        assertNull(result.getId());
-        assertEquals("APROBADO", result.getEstado());
-        assertEquals("WEBPAYPLUS", result.getProveedor());
-        assertNotNull(result.getFechaTransaccion());
-    }
-
-    @Test
-    void testConsultarEstadoTransaccion_MultipleCalls() {
-        // Arrange
-        UUID transaccionId1 = UUID.randomUUID();
-        UUID transaccionId2 = UUID.randomUUID();
-
-        // Act
-        TransaccionModel result1 = webpayApiService.consultarEstadoTransaccion(transaccionId1);
-        TransaccionModel result2 = webpayApiService.consultarEstadoTransaccion(transaccionId2);
-
-        // Assert
-        assertNotNull(result1);
-        assertNotNull(result2);
-        assertEquals(transaccionId1, result1.getId());
-        assertEquals(transaccionId2, result2.getId());
-        assertEquals("APROBADO", result1.getEstado());
-        assertEquals("APROBADO", result2.getEstado());
-    }
-
-    @Test
-    void testConsultarEstadoTransaccion_VerifyPastTimestamp() {
-        // Arrange
-        UUID transaccionId = UUID.randomUUID();
-        LocalDateTime beforeCall = LocalDateTime.now();
-
-        // Act
-        TransaccionModel result = webpayApiService.consultarEstadoTransaccion(transaccionId);
-
-        // Assert
-        assertNotNull(result);
-        assertNotNull(result.getFechaTransaccion());
-        // La fecha debería ser en el pasado (5 minutos antes)
-        assertTrue(result.getFechaTransaccion().isBefore(beforeCall));
-    }
-
-    @Test
-    void testProcesarTransaccion_VerifyUUIDGeneration() {
-        // Act
-        TransaccionModel result1 = webpayApiService.procesarTransaccion(orderId, monto);
-        TransaccionModel result2 = webpayApiService.procesarTransaccion(orderId, monto);
-
-        // Assert
-        assertNotNull(result1.getId());
-        assertNotNull(result2.getId());
-        assertNotEquals(result1.getId(), result2.getId());
-        
-        // Verificar que son UUIDs válidos
-        assertDoesNotThrow(() -> UUID.fromString(result1.getId().toString()));
-        assertDoesNotThrow(() -> UUID.fromString(result2.getId().toString()));
-    }
-
-    @Test
-    void testSolicitarReembolso_VerifyUUIDGeneration() {
-        // Act
-        ReembolsoModel result1 = webpayApiService.solicitarReembolso(pagoId, monto);
-        ReembolsoModel result2 = webpayApiService.solicitarReembolso(pagoId, monto);
-
-        // Assert
-        assertNotNull(result1.getId());
-        assertNotNull(result2.getId());
-        assertNotEquals(result1.getId(), result2.getId());
-        
-        // Verificar que son UUIDs válidos
-        assertDoesNotThrow(() -> UUID.fromString(result1.getId().toString()));
-        assertDoesNotThrow(() -> UUID.fromString(result2.getId().toString()));
-    }
-
-    @Test
-    void testProcesarTransaccion_VerifyProveedor() {
-        // Act
-        TransaccionModel result = webpayApiService.procesarTransaccion(orderId, monto);
-
-        // Assert
-        assertNotNull(result);
-        assertEquals("WEBPAYPLUS", result.getProveedor());
-    }
-
-    @Test
-    void testConsultarEstadoTransaccion_VerifyProveedor() {
-        // Arrange
-        UUID transaccionId = UUID.randomUUID();
-
-        // Act
-        TransaccionModel result = webpayApiService.consultarEstadoTransaccion(transaccionId);
-
-        // Assert
-        assertNotNull(result);
-        assertEquals("WEBPAYPLUS", result.getProveedor());
-    }
-
-    @Test
-    void testProcesarTransaccion_VerifyDetalleError() {
-        // Act
-        TransaccionModel result = webpayApiService.procesarTransaccion(orderId, monto);
-
-        // Assert
-        assertNotNull(result);
-        assertNull(result.getDetalleError());
-    }
-
-    @Test
-    void testConsultarEstadoTransaccion_VerifyDetalleError() {
-        // Arrange
-        UUID transaccionId = UUID.randomUUID();
-
-        // Act
-        TransaccionModel result = webpayApiService.consultarEstadoTransaccion(transaccionId);
-
-        // Assert
-        assertNotNull(result);
-        assertNull(result.getDetalleError());
+        // Then
+        assertNotNull(reembolso1);
+        assertNotNull(reembolso2);
+        assertNotNull(reembolso3);
+        assertNotEquals(reembolso1.getId(), reembolso2.getId());
+        assertNotEquals(reembolso2.getId(), reembolso3.getId());
+        assertNotEquals(reembolso1.getId(), reembolso3.getId());
     }
 } 

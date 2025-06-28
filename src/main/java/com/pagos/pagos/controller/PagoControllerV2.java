@@ -75,14 +75,14 @@ public class PagoControllerV2 {
                     schema = @Schema(implementation = PagoModel.class))),
         @ApiResponse(responseCode = "404", description = "Pago no encontrado")
     })
-    public EntityModel<PagoModel> getPagosByCodigo(
+    public ResponseEntity<EntityModel<PagoModel>> getPagosByCodigo(
             @Parameter(description = "ID único del pago", example = "123e4567-e89b-12d3-a456-426614174000")
             @PathVariable UUID id) {
         PagoModel pago = pagoService.obtenerPagoPorId(id);
-        return EntityModel.of(pago,
-                linkTo(methodOn(PagoControllerV2.class).getPagosByCodigo(id))
-                        .withSelfRel()
-                        .withHref("/api/v2/pagos/" + id));
+        if (pago == null) {
+            return ResponseEntity.notFound().build();
+        }
+        return ResponseEntity.ok(assembler.toModel(pago));
     }
 
     @PostMapping(produces = MediaTypes.HAL_JSON_VALUE)
